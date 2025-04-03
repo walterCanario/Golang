@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest"></script> 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Navegación Superior -->
+    <nav class="fixed top-0 right-0 left-0 z-50 h-16 bg-white border-b border-gray-200 shadow-sm">
+        <div class="flex items-center justify-between h-full px-4">
+            <div class="flex items-center space-x-4">
+                <button id="toggle-sidebar" class="p-2 rounded-lg hover:bg-gray-100">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <h1 class="text-xl font-semibold text-gray-800">Mi Dashboard</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="p-2 rounded-lg hover:bg-gray-100 relative">
+                    <i data-lucide="bell" class="w-6 h-6"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm font-medium text-gray-700">John Doe</span>
+                    <button class="p-2 rounded-full hover:bg-gray-100">
+                        <i data-lucide="user" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor Principal -->
+    <div class="flex h-screen pt-16"> <!-- pt-16 para compensar la navbar fija -->
+        <!-- Navegación Lateral -->
+        <aside id="sidebar"
+            class="fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 overflow-y-auto transition-transform duration-300">
+            <div class="p-4">
+                <nav class="space-y-1">
+                    <a href="/" class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 group">
+                        <i data-lucide="home" class="w-5 h-5 mr-3 text-gray-500 group-hover:text-gray-700"></i>
+                        <span class="font-medium">Inicio</span>
+                    </a>
+                    <a href="/dashboard"
+                        class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 group">
+                        <i data-lucide="layout-dashboard"
+                            class="w-5 h-5 mr-3 text-gray-500 group-hover:text-gray-700"></i>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+
+                    <!-- Menú desplegable -->
+                    <div class="space-y-1">
+                        <button id="dropdown-btn"
+                            class="flex items-center justify-between w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 group">
+                            <div class="flex items-center">
+                                <i data-lucide="folder"
+                                    class="w-5 h-5 mr-3 text-gray-500 group-hover:text-gray-700"></i>
+                                <span class="font-medium">Proyectos</span>
+                            </div>
+                            <i data-lucide="chevron-down"
+                                class="w-5 h-5 text-gray-500 transition-transform duration-200"></i>
+                        </button>
+                        <div id="dropdown-menu" class="hidden pl-4 mt-1 space-y-1">
+                            <a href="/projects/active"
+                                class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100">
+                                Activos
+                            </a>
+                            <a href="/projects/archived"
+                                class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100">
+                                Archivados
+                            </a>
+                        </div>
+                    </div>
+
+                    <a href="/reports"
+                        class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 group">
+                        <i data-lucide="bar-chart" class="w-5 h-5 mr-3 text-gray-500 group-hover:text-gray-700"></i>
+                        <span class="font-medium">Reportes</span>
+                    </a>
+
+                    <a href="/settings"
+                        class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 group">
+                        <i data-lucide="settings" class="w-5 h-5 mr-3 text-gray-500 group-hover:text-gray-700"></i>
+                        <span class="font-medium">Configuración</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 overflow-y-auto p-8 ml-64">
+            <div class="container mx-auto">
+                <div class="space-y-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="container mx-auto">
+                            <!-- Navegación de pestañas -->
+                            <div class="border-b border-gray-200">
+                                <nav class="flex space-x-4" id="tabs">
+                                    <button
+                                        class="tab-button px-4 py-2 text-gray-700 border-b-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                                        data-tab="dashboard">Dashboard</button>
+                                    <button
+                                        class="tab-button px-4 py-2 text-gray-700 border-b-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                                        data-tab="usuarios">Usuarios</button>
+                                    <button
+                                        class="tab-button px-4 py-2 text-gray-700 border-b-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                                        data-tab="proyectos">Proyectos</button>
+                                    <button
+                                        class="tab-button px-4 py-2 text-gray-700 border-b-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                                        data-tab="reportes">Reportes</button>
+                                    <button
+                                        class="tab-button px-4 py-2 text-gray-700 border-b-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                                        data-tab="configuracion">Configuración</button>
+                                    <button
+                                        class="tab-button px-4 py-2 text-gray-700 border-b-2 border-transparent hover:border-blue-500 focus:border-blue-500 focus:outline-none"
+                                        data-tab="soporte">Soporte</button>
+                                </nav>
+                            </div>
+
+                            <!-- Contenido de pestañas -->
+                            <div class="mt-6">
+                                <div id="dashboard" class="tab-content">
+                                    <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
+                                    <p class="text-gray-600">Resumen general del sistema.</p>
+                                </div>
+                                <div id="usuarios" class="tab-content hidden">
+                                    <h2 class="text-2xl font-bold mb-4">Usuarios</h2>
+                                    <p class="text-gray-600">Gestión de usuarios del sistema.</p>
+                                </div>
+                                <div id="proyectos" class="tab-content hidden">
+                                    <h2 class="text-2xl font-bold mb-4">Proyectos</h2>
+                                    <p class="text-gray-600">Lista y estado de proyectos.</p>
+                                </div>
+                                <div id="reportes" class="tab-content hidden">
+                                    <h2 class="text-2xl font-bold mb-4">Reportes</h2>
+                                    <p class="text-gray-600">Análisis y estadísticas del sistema.</p>
+                                    <!-- Contenedor del gráfico -->
+                                    <div id="chart-reportes" class="w-full h-80 bg-white shadow-md rounded-lg p-4">
+
+                                    </div>
+                                </div>
+                                <div id="configuracion" class="tab-content hidden">
+                                    <h2 class="text-2xl font-bold mb-4">Configuración</h2>
+                                    <p class="text-gray-600">Opciones de personalización.</p>
+                                </div>
+                                <div id="soporte" class="tab-content hidden">
+                                    <h2>Soporte</h2>
+                                    <button onclick="downloadCSV('barras')">📥 Descargar Barras</button>
+                                    <div id="chart-pastel" class="w-full h-80 bg-white shadow-md rounded-lg p-4"></div>
+
+                                    <button onclick="downloadCSV('lineas')">📥 Descargar Líneas</button>
+                                    <div id="chart-lineas" class="w-full h-80 bg-white shadow-md rounded-lg p-4"></div>
+
+                                    <button onclick="downloadCSV('pastel')">📥 Descargar Pastel</button>
+                                    <div id="chart-barras" class="w-full h-80 bg-white shadow-md rounded-lg p-4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="main-content">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white p-4 rounded-lg shadow">
+                                <h3 class="text-lg font-semibold mb-4">Distribución por Nacionalidad</h3>
+                                <div id="grafico-barras" class="grafico"></div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow">
+                                <h3 class="text-lg font-semibold mb-4">Tendencia por Educación</h3>
+                                <div id="grafico-lineas" class="grafico"></div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow col-span-2">
+                                <h3 class="text-lg font-semibold mb-4">Distribución por Sexo</h3>
+                                <div id="grafico-pie" class="grafico"></div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-2">Usuarios Activos</h3>
+                            <p class="text-3xl font-bold">1,234</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-2">Ingresos</h3>
+                            <p class="text-3xl font-bold">$45,678</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-2">Proyectos</h3>
+                            <p class="text-3xl font-bold">23</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-2">Tareas Pendientes</h3>
+                            <p class="text-3xl font-bold">17</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-2">Clientes</h3>
+                            <p class="text-3xl font-bold">542</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-2">Soporte</h3>
+                            <p class="text-3xl font-bold">5 tickets</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    @navScript()
+</body>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Inicializar iconos
+        lucide.createIcons();
+        let chartInitialized = false;
+        let soporteInitialized = false;
+
+        // Toggle del sidebar
+        const toggleButton = document.getElementById('toggle-sidebar');
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('main');
+
+        toggleButton.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+            mainContent.classList.toggle('ml-0');
+            mainContent.classList.toggle('ml-64');
+        });
+
+        // Toggle del menú desplegable
+        const dropdownBtn = document.getElementById('dropdown-btn');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const dropdownIcon = dropdownBtn.querySelector('[data-lucide="chevron-down"]');
+
+        dropdownBtn.addEventListener('click', () => {
+            dropdownMenu.classList.toggle('hidden');
+            dropdownIcon.classList.toggle('rotate-180');
+        });
+
+        // Marcar ítem activo
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('a').forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('bg-gray-100');
+                link.classList.add('text-blue-600');
+            }
+        });
+
+        const tabButtons = document.querySelectorAll(".tab-button");
+        const tabContents = document.querySelectorAll(".tab-content");
+
+        tabButtons.forEach(button => {
+            button.addEventListener("click", function () {
+                const tabId = this.getAttribute("data-tab");
+
+                // Oculta todas las pestañas y desactiva las pestañas activas
+                tabContents.forEach(content => content.classList.add("hidden"));
+                tabButtons.forEach(btn => btn.classList.remove("border-blue-500", "text-blue-600"));
+
+                // Muestra la pestaña seleccionada y resalta el botón activo
+                document.getElementById(tabId).classList.remove("hidden");
+                this.classList.add("border-blue-500", "text-blue-600");
+
+                // Inicializar el gráfico solo cuando se abre la pestaña "Reportes"
+                if (tabId === "reportes" && !chartInitialized) {
+                    chartInitialized = true;
+                    renderChart("chart-reportes", "barras");
+                }
+                // pestaña soporte 
+                if (tabId === "soporte" && !soporteInitialized) {
+                    soporteInitialized = true;
+                    renderChart("chart-barras", "barras");
+                    renderChart("chart-lineas", "lineas");
+                    renderChart("chart-pastel", "pastel");
+                }
+
+            });
+        });
+
+        // Activa la primera pestaña por defecto
+        tabButtons[0].classList.add("border-blue-500", "text-blue-600");
+
+        // Función para renderizar el gráfico
+        async function renderChart(elementId, type) {
+            try {
+                let response = await fetch(`http://localhost:8080/chart-data?type=${type}`);
+                let datos = await response.json();
+
+
+                let chart = echarts.init(document.getElementById(elementId));
+                let option;
+
+                if (type === "barras" || type === "lineas") {
+                    option = {
+                        title: { text: type === "barras" ? "Ventas Mensuales" : "Tendencia de Ventas" },
+                        tooltip: {},
+                        xAxis: { data: datos.labels },
+                        yAxis: {},
+                        series: [{ name: "Valor", type: type === "barras" ? "bar" : "line", data: datos.data }]
+                    };
+                } else if (type === "pastel") {
+                    option = {
+                        title: { text: "Distribución de Productos" },
+                        tooltip: { trigger: "item" },
+                        series: [{
+                            type: "pie",
+                            data: datos.labels.map((label, i) => ({ value: datos.data[i], name: label }))
+                        }]
+                    };
+                }
+
+
+                chart.setOption(option);
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+            }
+        }
+
+        function downloadCSV(chartType) {
+            let chartEl = document.getElementById(`chart-${chartType}`);
+            let chart = echarts.getInstanceByDom(chartEl);
+            if (!chart) return;
+
+            let dataset = chart.dataset;
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += dataset.labels.map((label, i) => `${label},${dataset.data[i]}`).join("\n");
+
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `${chartType}_data.csv`);
+            document.body.appendChild(link);
+            link.click();
+        }
+
+    });
+</script>
+
+</html>

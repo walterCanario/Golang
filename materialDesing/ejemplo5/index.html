@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicación de Reportes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .menu-principal {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+        }
+        .menu-principal ul {
+            list-style-type: none;
+        }
+        .menu-principal li {
+            display: inline;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .menu-lateral {
+            width: 200px;
+            float: left;
+            margin-top: 20px;
+        }
+        .graficos {
+            margin-left: 220px; /* Espacio para el menú lateral */
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu-principal">
+        <ul>
+            <li onclick="mostrarMenu('inicio')">Inicio</li>
+            <li onclick="mostrarMenu('reporte')">Reporte</li>
+            <li onclick="mostrarMenu('comparativas')">Comparativas</li>
+            <li onclick="mostrarMenu('georeferenciacion')">Georeferenciación</li>
+            <li onclick="mostrarMenu('perfil')">Perfil</li>
+        </ul>
+    </div>
+
+    <div class="menu-lateral" id="menuReporte" style="display:none;">
+        <h3>Opciones de Reporte</h3>
+        <label for="selectorPanel">Selector de Panel:</label>
+        <select id="selectorPanel" onchange="mostrarFiltros()">
+            <option value="">Seleccione...</option>
+            <option value="panel1">Panel 1</option>
+            <option value="panel2">Panel 2</option>
+        </select>
+
+        <label for="ano">Año:</label>
+        <select id="ano">
+            <!-- Opciones de año -->
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+        </select>
+
+        <!-- Más selects para Encuesta, Región, Provincia, Comuna -->
+
+        <button onclick="generarGraficos()">Generar Gráficos</button>
+    </div>
+
+    <div class="graficos" id="graficos">
+        <!-- Espacio para mostrar gráficos -->
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

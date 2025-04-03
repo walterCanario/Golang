@@ -1,0 +1,29 @@
+Resumen de Archivos a Modificar
+Crear el Handler:
+
+internal/adapters/handlers/<nombre_del_handler>/<nombre_del_handler>.go
+
+Definir el Servicio:
+
+internal/service/<nombre_del_servicio>.go
+
+Definir el Repositorio:
+
+internal/adapters/repository/<nombre_del_repositorio>.go
+
+Registrar el Handler en el Enrutador:
+
+cmd/server/main.go
+
+Conclusión
+Al agregar un nuevo handler, debes modificar o crear varios archivos para asegurarte de que todo esté correctamente conectado. Esto incluye:
+
+Crear el handler.
+
+Asegurarte de que el servicio tenga los métodos necesarios.
+
+Asegurarte de que el repositorio tenga los métodos necesarios.
+
+Registrar las rutas del handler en el main.go.
+
+Siguiendo estos pasos, puedes agregar nuevas funcionalidades a tu aplicación de manera modular y organizada.

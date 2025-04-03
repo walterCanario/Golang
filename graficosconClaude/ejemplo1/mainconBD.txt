@@ -1,0 +1,251 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/gorilla/websocket"
+	_ "github.com/lib/pq"
+	"github.com/patrickmn/go-cache"
+)
+
+// Estructura de configuración de base de datos
+type DatabaseConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	DBName   string
+}
+
+// Estructura de filtros más flexible
+type Filtros struct {
+	Tabla      string            `json:"tabla"`
+	Columnas   map[string]string `json:"columnas"`
+	Agregacion string            `json:"agregacion"`
+	CampoValor string            `json:"campo_valor"`
+}
+
+// Estructura para el gráfico
+type Grafico struct {
+	ID     string                   `json:"id"`
+	Datos  []map[string]interface{} `json:"datos"`
+	Filtro Filtros                  `json:"filtros"`
+}
+
+// Caché global
+var (
+	consultaCache *cache.Cache
+	db            *sql.DB
+	upgrader      = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+)
+
+// Inicializar conexión a base de datos y caché
+func initDatabase(config DatabaseConfig) error {
+	// Conexión a base de datos
+	connStr := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		config.Host, config.Port, config.User, config.Password, config.DBName,
+	)
+
+	var err error
+	db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		return err
+	}
+
+	// Verificar conexión
+	err = db.Ping()
+	if err != nil {
+		return err
+	}
+
+	// Inicializar caché
+	consultaCache = cache.New(5*time.Minute, 10*time.Minute)
+
+	return nil
+}
+
+// Función de consulta dinámica con caché
+func consultaDinamica(filtros Filtros) ([]map[string]interface{}, error) {
+	// Generar clave de caché única
+	claveCache := generarClaveCache(filtros)
+
+	// Verificar caché primero
+	if cachedData, found := consultaCache.Get(claveCache); found {
+		return cachedData.([]map[string]interface{}), nil
+	}
+
+	// Construir consulta dinámica
+	query := fmt.Sprintf(`
+        SELECT 
+            %s AS nombre, 
+            %s(%s) AS valor
+        FROM %s
+        WHERE 1=1
+    `, generarSeleccionNombre(filtros),
+		filtros.Agregacion,
+		filtros.CampoValor,
+		filtros.Tabla)
+
+	// Slice para almacenar parámetros
+	var params []interface{}
+	paramCount := 1
+
+	// Agregar condiciones de filtro dinámicamente
+	for columna, valor := range filtros.Columnas {
+		if valor != "" {
+			query += fmt.Sprintf(" AND %s = $%d", columna, paramCount)
+			params = append(params, valor)
+			paramCount++
+		}
+	}
+
+	// Agregar agrupamiento
+	query += fmt.Sprintf(" GROUP BY %s", generarSeleccionNombre(filtros))
+
+	// Ejecutar consulta
+	rows, err := db.Query(query, params...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Procesar resultados
+	var datosFiltrados []map[string]interface{}
+	for rows.Next() {
+		var nombre, valor string
+		err := rows.Scan(&nombre, &valor)
+		if err != nil {
+			return nil, err
+		}
+
+		datosFiltrados = append(datosFiltrados, map[string]interface{}{
+			"name":  nombre,
+			"value": valor,
+		})
+	}
+
+	// Guardar en caché
+	consultaCache.Set(claveCache, datosFiltrados, cache.DefaultExpiration)
+
+	return datosFiltrados, nil
+}
+
+// Generar clave de caché única
+func generarClaveCache(filtros Filtros) string {
+	clave := filtros.Tabla
+	for columna, valor := range filtros.Columnas {
+		clave += fmt.Sprintf("_%s:%s", columna, valor)
+	}
+	clave += fmt.Sprintf("_%s_%s", filtros.Agregacion, filtros.CampoValor)
+	return clave
+}
+
+// Generar selección de nombre basado en filtros
+func generarSeleccionNombre(filtros Filtros) string {
+	// Si no se especifica, usar primera columna de filtros
+	for columna := range filtros.Columnas {
+		return columna
+	}
+	return "id"
+}
+
+// Función para generar gráfico
+func generarGrafico(tipoGrafico string, filtros Filtros, cliente *websocket.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	// Simular tiempo de procesamiento
+	time.Sleep(time.Second * 1)
+
+	// Filtrar datos
+	datos, err := consultaDinamica(filtros)
+	if err != nil {
+		log.Printf("Error filtrando datos: %v", err)
+		return
+	}
+
+	grafico := Grafico{
+		ID:     tipoGrafico,
+		Datos:  datos,
+		Filtro: filtros,
+	}
+
+	// Enviar gráfico al cliente
+	err = cliente.WriteJSON(grafico)
+	if err != nil {
+		log.Printf("Error enviando gráfico %s: %v", tipoGrafico, err)
+	}
+}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Establecer conexión WebSocket
+
+	cliente, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer cliente.Close()
+
+	// Ciclo para manejar múltiples solicitudes
+	for {
+		// Recibir filtros
+		var filtros Filtros
+		err = cliente.ReadJSON(&filtros)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		// WaitGroup para sincronizar goroutines
+		var wg sync.WaitGroup
+
+		// Tipos de gráficos fijos
+		tiposGraficos := []string{"barras", "lineas", "pie"}
+
+		// Generar gráficos en paralelo
+		for _, tipo := range tiposGraficos {
+			wg.Add(1)
+			go generarGrafico(tipo, filtros, cliente, &wg)
+		}
+
+		// Esperar a que terminen todas las goroutines
+		wg.Wait()
+	}
+}
+
+func main() {
+	// Configuración de base de datos
+	dbConfig := DatabaseConfig{
+		Host:     "localhost",
+		Port:     5432,
+		User:     "postgres",
+		Password: "123456",
+		DBName:   "postgres",
+	}
+
+	// Inicializar base de datos
+	err := initDatabase(dbConfig)
+	if err != nil {
+		log.Fatalf("Error conectando a la base de datos: %v", err)
+	}
+	defer db.Close()
+
+	// Ruta de WebSocket
+	http.HandleFunc("/graficos", handleWebSocket)
+
+	// Servir archivo HTML
+	http.Handle("/", http.FileServer(http.Dir(".")))
+
+	log.Println("Servidor iniciado en :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}

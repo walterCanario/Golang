@@ -1,0 +1,106 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"math/rand"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/gorilla/websocket"
+)
+
+type ChartRequest struct {
+	ID           string `json:"id"`
+	Nacionalidad string `json:"nacionalidad"`
+	Educacion    string `json:"educacion"`
+	Sexo         string `json:"sexo"`
+}
+
+type ChartResult struct {
+	ID   string `json:"id"`
+	Data string `json:"data"`
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		// Permitir todas las conexiones (para desarrollo)
+		return true
+	},
+}
+
+var clients = make(map[*websocket.Conn]bool)
+var clientsMutex sync.Mutex
+
+var chartChannel = make(chan ChartResult)
+
+func generateChart(request ChartRequest) {
+	// Simular tiempo de procesamiento
+	time.Sleep(time.Duration(rand.Intn(5)+1) * time.Second)
+
+	// Crear datos ficticios basados en los filtros
+	data := fmt.Sprintf(
+		"Gráfico %s generado con Nacionalidad: %s, Educación: %s, Sexo: %s",
+		request.ID, request.Nacionalidad, request.Educacion, request.Sexo,
+	)
+
+	// Enviar resultado al canal
+	chartChannel <- ChartResult{ID: request.ID, Data: data}
+}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Error al establecer WebSocket: %v", err)
+		return
+	}
+
+	clientsMutex.Lock()
+	clients[conn] = true
+	clientsMutex.Unlock()
+
+	defer func() {
+		clientsMutex.Lock()
+		delete(clients, conn)
+		clientsMutex.Unlock()
+		conn.Close()
+	}()
+
+	for {
+		var request ChartRequest
+		err := conn.ReadJSON(&request)
+		if err != nil {
+			log.Printf("Error al leer JSON: %v", err)
+			break
+		}
+
+		go generateChart(request)
+	}
+}
+
+func sendChartResults() {
+	for result := range chartChannel {
+		clientsMutex.Lock()
+		for conn := range clients {
+			err := conn.WriteJSON(result)
+			if err != nil {
+				log.Printf("Error al enviar datos al cliente: %v", err)
+				conn.Close()
+				delete(clients, conn)
+			}
+		}
+		clientsMutex.Unlock()
+	}
+}
+
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	http.HandleFunc("/ws", handleWebSocket)
+
+	go sendChartResults()
+
+	log.Println("Servidor iniciado en http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}

@@ -1,0 +1,34 @@
+// components/layout.templ
+package components
+
+
+templ Layout() {
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Dashboard</title>
+        <script src="https://unpkg.com/htmx.org"></script>
+        <style>
+            nav button { margin: 5px; padding: 10px; }
+            aside { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+        </style>
+    </head>
+    <body>
+        <header>
+            <nav>
+                <button hx-get="/dashboard" hx-target="#lateral-section">Dashboard</button>
+                <button hx-get="/comparativas" hx-target="#lateral-section">Comparativas</button>
+                <button hx-get="/reportes" hx-target="#lateral-section">Reportes</button>
+                <button hx-get="/georeferencia" hx-target="#lateral-section">Georeferencia</button>
+            </nav>
+        </header>
+        <aside id="lateral-section">
+            <!-- Contenido dinámico aquí -->
+			@DashboardMenu()
+        </aside>
+        { children... }
+    </body>
+    </html>
+}

@@ -1,0 +1,47 @@
+<form  id="create-form" hx-target="#content" hx-post="/club/create" hx-swap="innerHTML" method="POST" class="form-group">
+    <div class="form-group">
+        <label for="nombres">Nombre del Club:</label>
+        <input type="text" class="form-control" id="nombre" name="nombre" >
+    </div>
+    <div class="form-group">
+        <label for="nombres">Representante Legal</label>
+        <input type="text" class="form-control" id="representante" name="representante" >
+    </div>    
+    <div class="form-group">
+        <label for= "serie">Comuna:</label>
+        <select class="form-control" id="comuna" name="comuna" required>
+            <option value ="" selected >Selecciona Comuna:</option>
+            {{ range .Comunas }}
+             <option value="{{ .Nombre }}">{{ .Nombre }}</option> 
+            {{ end }}
+        </select>
+    </div> 
+    <div class="form-group">
+        <label for="direccion">Dirección:</label>
+        <input type="text" class="form-control" id="direccion" name="direccion" required>
+    </div>
+        
+    <button type="button" onclick="confirmarEnvioClub()" class="btn btn-primary mt-3">Guardar</button>
+    <!-- <button hx-trigger="/listUsers" class="btn btn-danger mt-3">Cancelar</button> -->
+    <!-- <button hx-trigger="/listUsers" class="btn btn-danger mt-3">Cancelar</button> -->
+
+</form>
+<script>
+  function confirmarEnvioClub() {
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "¿Deseas Guardar este usuario?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Envía el formulario usando HTMX
+                htmx.trigger(htmx.find("#create-form"), "submit");
+            }
+        });
+    }
+</script> 

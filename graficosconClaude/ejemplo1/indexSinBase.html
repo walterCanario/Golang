@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gráficos Dinámicos</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .grafico {
+            width: 400px;
+            height: 300px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label>Nacionalidad:
+            <select id="nacionalidad">
+                <option value="">Todos</option>
+                <option>Mexico</option>
+                <option>USA</option>
+                <option>Canada</option>
+            </select>
+        </label>
+
+        <label>Educación:
+            <select id="educacion">
+                <option value="">Todos</option>
+                <option>Bachillerato</option>
+                <option>Universitario</option>
+                <option>Maestria</option>
+            </select>
+        </label>
+
+        <label>Sexo:
+            <select id="sexo">
+                <option value="">Todos</option>
+                <option>Masculino</option>
+                <option>Femenino</option>
+            </select>
+        </label>
+        <button onclick="enviarFiltros()"> Cargar</button>
+    </div>
+
+    <div id="graficos">
+        <div id="grafico-barras" class="grafico"></div>
+        <div id="grafico-lineas" class="grafico"></div>
+        <div id="grafico-pie" class="grafico"></div>
+    </div>
+
+    <script>
+        const socket = new WebSocket('ws://localhost:8080/graficos');
+        
+        // Mapeo de inicialización de gráficos
+        const graficosECharts = {
+            'barras': echarts.init(document.getElementById('grafico-barras')),
+            'lineas': echarts.init(document.getElementById('grafico-lineas')),
+            'pie': echarts.init(document.getElementById('grafico-pie'))
+        };
+
+        // Función para obtener filtros actuales
+        function obtenerFiltros() {
+            return {
+                nacionalidad: document.getElementById('nacionalidad').value,
+                educacion: document.getElementById('educacion').value,
+                sexo: document.getElementById('sexo').value
+            };
+        }
+
+        // Función para enviar filtros
+        function enviarFiltros() {
+            const filtros = obtenerFiltros();
+            socket.send(JSON.stringify(filtros));
+        }
+
+        // Conexión establecida
+        socket.onopen = function() {
+            // Cargar datos iniciales (sin filtros)
+            enviarFiltros();
+        };
+
+        // Recibir gráficos
+        socket.onmessage = function(event) {
+            const grafico = JSON.parse(event.data);
+            
+            // Configuraciones de gráficos
+            const opciones = {
+                'barras': {
+                    title: { text: 'Gráfico de Barras' },
+                    xAxis: { type: 'category' },
+                    yAxis: { type: 'value' },
+                    series: [{ 
+                        type: 'bar', 
+                        data: grafico.datos 
+                    }]
+                },
+                'lineas': {
+                    title: { text: 'Gráfico de Líneas' },
+                    xAxis: { type: 'category' },
+                    yAxis: { type: 'value' },
+                    series: [{ 
+                        type: 'line', 
+                        data: grafico.datos 
+                    }]
+                },
+                'pie': {
+                    title: { text: 'Gráfico de Pastel' },
+                    series: [{ 
+                        type: 'pie',
+                        data: grafico.datos 
+                    }]
+                }
+            };
+
+            // Renderizar gráfico específico
+            graficosECharts[grafico.id].setOption(opciones[grafico.id]);
+        };
+
+        socket.onerror = function(error) {
+            console.error('WebSocket Error:', error);
+        };
+
+        // Agregar event listeners a los selects
+        // document.getElementById('nacionalidad').addEventListener('change', enviarFiltros);
+        // document.getElementById('educacion').addEventListener('change', enviarFiltros);
+        // document.getElementById('sexo').addEventListener('change', enviarFiltros);
+    </script>
+</body>
+</html>

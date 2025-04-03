@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gráficos Dinámicos</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .grafico {
+            width: 400px;
+            height: 300px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label>Nacionalidad:
+            <select id="nacionalidad">
+                <option value="">Todos</option>
+                <option>Mexico</option>
+                <option>USA</option>
+                <option>Canada</option>
+            </select>
+        </label>
+
+        <label>Educación:
+            <select id="educacion">
+                <option value="">Todos</option>
+                <option>Bachillerato</option>
+                <option>Universitario</option>
+                <option>Maestria</option>
+            </select>
+        </label>
+
+        <label>Sexo:
+            <select id="sexo">
+                <option value="">Todos</option>
+                <option>Masculino</option>
+                <option>Femenino</option>
+            </select>
+        </label>
+        <button onclick="cargarGraficos()">Cargar</button>
+    </div>
+
+    <div id="graficos">
+        <div id="grafico-barras" class="grafico"></div>
+        <div id="grafico-lineas" class="grafico"></div>
+        <div id="grafico-pie" class="grafico"></div>
+    </div>
+
+    <script>
+        // Inicializar gráficos
+        const graficosECharts = {
+            'barras': echarts.init(document.getElementById('grafico-barras')),
+            'lineas': echarts.init(document.getElementById('grafico-lineas')),
+            'pie': echarts.init(document.getElementById('grafico-pie'))
+        };
+
+        // Función para obtener filtros actuales
+        function obtenerFiltros() {
+            return {
+                nacionalidad: document.getElementById('nacionalidad').value,
+                educacion: document.getElementById('educacion').value,
+                sexo: document.getElementById('sexo').value
+            };
+        }
+
+        // Función para cargar gráficos
+        async function cargarGraficos() {
+            try {
+                const response = await fetch('http://localhost:8080/graficos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(obtenerFiltros())
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const graficos = await response.json();
+                
+                // Renderizar cada gráfico
+                graficos.forEach(grafico => {
+                    const opciones = {
+                        'barras': {
+                            title: { text: 'Gráfico de Barras' },
+                            xAxis: { type: 'category' },
+                            yAxis: { type: 'value' },
+                            series: [{ 
+                                type: 'bar', 
+                                data: grafico.datos 
+                            }]
+                        },
+                        'lineas': {
+                            title: { text: 'Gráfico de Líneas' },
+                            xAxis: { type: 'category' },
+                            yAxis: { type: 'value' },
+                            series: [{ 
+                                type: 'line', 
+                                data: grafico.datos 
+                            }]
+                        },
+                        'pie': {
+                            title: { text: 'Gráfico de Pastel' },
+                            series: [{ 
+                                type: 'pie',
+                                data: grafico.datos 
+                            }]
+                        }
+                    };
+
+                    graficosECharts[grafico.id].setOption(opciones[grafico.id]);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Cargar datos iniciales
+        cargarGraficos();
+    </script>
+</body>
+</html>

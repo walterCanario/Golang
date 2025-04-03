@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es" x-data="{ menu: 'default', sidenavContent: [] }" x-init="fetchSideNav(menu)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi App</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        nav { background: #333; color: white; padding: 10px; }
+        nav a { color: white; margin-right: 15px; text-decoration: none; }
+        #sidenav { background: #f4f4f4; padding: 10px; width: 200px; min-height: 100vh; }
+    </style>
+</head>
+<body x-data="mainApp">
+
+    <!-- Menú Superior -->
+    <nav>
+        <a href="#" @click="menu = 'comparativas'; fetchSideNav(menu)">Comparativas</a>
+        <a href="#" @click="menu = 'reportes'; fetchSideNav(menu)">Reportes</a>
+        <a href="#" @click="menu = 'georeferencia'; fetchSideNav(menu)">Georeferencia</a>
+    </nav>
+
+    <div style="display: flex;">
+        <!-- Menú Lateral dinámico -->
+        <div id="sidenav">
+            <template x-for="item in sidenavContent" :key="item.text">
+                <ul>
+                    <li><a :href="item.link" x-text="item.text"></a></li>
+                </ul>
+            </template>
+        </div>
+
+        <!-- Contenido -->
+        <div style="flex-grow: 1; padding: 20px;">
+            <h1>Bienvenido</h1>
+            <p>Selecciona una opción en el menú superior.</p>
+        </div>
+    </div>
+
+    <script>
+        function fetchSideNav(menu) {
+            fetch(`/sidenav?menu=${menu}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Actualiza el estado de Alpine.js directamente
+                    Alpine.$data(document.body).sidenavContent = data;
+                })
+                .catch(error => {
+                    console.error('Error cargando el menú lateral:', error);
+                    alert('Error cargando el menú lateral. Inténtalo de nuevo.');
+                });
+        }
+    </script>
+
+</body>
+</html>

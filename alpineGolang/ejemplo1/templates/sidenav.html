@@ -1,0 +1,29 @@
+<div id="sidenav">
+    <template x-if="menu === 'comparativas'">
+        <ul>
+            <li><a href="#">Comparar Ventas</a></li>
+            <li><a href="#">Comparar Usuarios</a></li>
+        </ul>
+    </template>
+
+    <template x-if="menu === 'reportes'">
+        <ul>
+            <li><a href="#">Reporte de Ventas</a></li>
+            <li><a href="#">Reporte de Clientes</a></li>
+        </ul>
+    </template>
+
+    <template x-if="menu === 'georeferencia'">
+        <ul>
+            <li><a href="#">Mapa de Clientes</a></li>
+            <li><a href="#">Mapa de Sucursales</a></li>
+        </ul>
+    </template>
+
+    <template x-if="menu === 'default'">
+        <ul>
+            <li>Bienvenido</li>
+            <li>Selecciona una opción del menú superior</li>
+        </ul>
+    </template>
+</div>

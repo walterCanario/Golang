@@ -1,0 +1,425 @@
+
+
+
+
+
+
+***********************************************************************************************
+
+// Función para construir consultas dinámicamente
+func buildQuery(tipo string, filtros Filtros) (string, []interface{}) {
+	var args []interface{}
+	var conditions []string
+	paramCount := 1
+
+	// Base de la consulta según el tipo de gráfico
+	var baseQuery string
+	switch tipo {
+	case "barras":
+		baseQuery = `
+			SELECT 
+				nacionalidad as name, 
+				COUNT(*) as value,
+				count(*) as promedio_salario
+			FROM comparativas
+			WHERE 1=1`
+	case "lineas":
+		baseQuery = `
+			SELECT 
+				nacionalidad as name, 
+				COUNT(*) as value,
+				count(*) as promedio_salario
+			FROM comparativas 
+			WHERE 1=1`
+	case "pie":
+		baseQuery = `
+			SELECT 
+				sexo as name, 
+				COUNT(*) as value,
+				COUNT(*) as value
+			FROM comparativas 
+			WHERE 1=1`
+	}
+
+	// Añadir filtros dinámicamente
+	// log.Println(filtros.Nacionalidad)
+	if filtros.Nacionalidad != "" {
+		// conditions = append(conditions, " AND nacionalidad = $"+string(rune(paramCount)))
+		conditions = append(conditions, " AND nacionalidad ='"+filtros.Nacionalidad+"'")
+		//args = append(args, filtros.Nacionalidad)
+		paramCount++
+	}
+	if filtros.Educacion != "" {
+		// conditions = append(conditions, " AND nacionalidad= $"+string(rune(paramCount)))
+		conditions = append(conditions, " AND  nacionalidad = '"+filtros.Educacion+"'")
+		//args = append(args, filtros.Educacion)
+		paramCount++
+	}
+	if filtros.Sexo != "" {
+		// conditions = append(conditions, " AND sexo = $"+string(rune(paramCount)))
+		conditions = append(conditions, " AND sexo = '"+filtros.Sexo+"'")
+		//args = append(args, filtros.Sexo)
+		paramCount++
+	}
+
+	// Completar la consulta según el tipo
+	query := baseQuery
+	for _, condition := range conditions {
+		query += condition
+	}
+
+	switch tipo {
+	case "barras":
+		query += " GROUP BY nacionalidad ORDER BY value DESC"
+	case "lineas":
+		query += " GROUP BY nacionalidad ORDER BY value DESC"
+	case "pie":
+		query += " GROUP BY sexo"
+	}
+	// log.Println(query)
+	// log.Println(args)
+	return query, args
+	// if len(conditions) > 0 {
+	// 	baseQuery += " AND " + strings.Join(conditions, " AND ")
+	// }
+
+	// baseQuery += " GROUP BY name"
+	// log.Println(baseQuery)
+	// return baseQuery, args
+}
+
+
+
+
+
+***********************************************************************************************
+
+
+// Obtener datos del gráfico
+func obtenerDatosGrafico(ctx context.Context, tipo string, filtros Filtros) ([]GraficoDatos, error) {
+	query, args := buildQuery(tipo, filtros)
+
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var datos []GraficoDatos
+	for rows.Next() {
+		var dato GraficoDatos
+		var extra float64 // Para el valor adicional (promedio_salario, promedio_edad o antiguedad_promedio)
+
+		if err := rows.Scan(&nacionalidad, &dato.Value, &extra); err != nil {
+			return nil, err
+		}
+
+		// Añadir información adicional al nombre según el tipo de gráfico
+		switch tipo {
+		case "barras":
+			dato.Name = nacionalidad.String + " (Salario Prom: $" + formatFloat(extra) + ")"
+		case "lineas":
+			dato.Name = nacionalidad.String + " (Edad Prom: " + formatFloat(extra) + ")"
+		case "pie":
+			dato.Name = dato.Name + " (Años Prom: " + formatFloat(extra) + ")"
+		}
+
+		datos = append(datos, dato)
+	}
+
+	return datos, nil
+}
+
+
+Esta función, obtenerDatosGrafico, se encarga de ejecutar una consulta SQL (generada previamente) y devolver los datos procesados en un formato específico, dependiendo del tipo de gráfico solicitado. Veamos el desglose:
+
+
+func obtenerDatosGrafico(ctx context.Context, tipo string, filtros Filtros) ([]GraficoDatos, error)
+ctx: Contexto que permite manejar límites de tiempo y cancelaciones para la consulta.
+tipo: Tipo de gráfico (e.g., barras, lineas, pie) que determina cómo procesar los datos.
+filtros: Parámetros para personalizar la consulta SQL (e.g., nacionalidad, educación, sexo).
+Retorno:
+[]GraficoDatos: Una lista de datos formateados para construir el gráfico.
+error: Posible error en la ejecución o procesamiento de la consulta.
+
+
+query, args := buildQuery(tipo, filtros)
+Llama a buildQuery, una función que genera dinámicamente:
+query: El comando SQL basado en el tipo de gráfico y los filtros.
+args: Los argumentos necesarios para completar la consulta (e.g., valores de filtros).
+Ejecutar la consulta SQL
+
+rows, err := db.QueryContext(ctx, query, args...)
+if err != nil {
+    return nil, err
+}
+defer rows.Close()
+db.QueryContext(ctx, query, args...):
+
+Ejecuta la consulta en la base de datos usando los parámetros proporcionados.
+El resultado (rows) contiene las filas devueltas por la base de datos.
+defer rows.Close():
+
+Asegura que los recursos asociados con rows se liberen al finalizar la función.
+Recorrer las filas del resultado
+
+var datos []GraficoDatos
+for rows.Next() {
+    var dato GraficoDatos
+    var extra float64
+datos: Una lista donde se almacenarán los resultados procesados.
+rows.Next(): Itera sobre las filas devueltas por la consulta.
+dato: Estructura para almacenar un registro individual (Name y Value).
+extra: Variable para un valor adicional, que varía según el tipo de gráfico (e.g., promedio de salario, edad, o antigüedad).
+Escanear valores de una fila
+
+if err := rows.Scan(&nacionalidad, &dato.Value, &extra); err != nil {
+    return nil, err
+}
+rows.Scan:
+
+Lee los valores de la fila actual y los asigna a las variables.
+Campos:
+nacionalidad: La nacionalidad asociada al dato.
+dato.Value: El valor principal del dato (e.g., cantidad de personas).
+extra: Un valor adicional, según el tipo de gráfico.
+Manejo de errores:
+
+Si ocurre un error al leer los valores, la función regresa inmediatamente con nil y el error.
+Formatear el nombre del dato
+
+switch tipo {
+case "barras":
+    dato.Name = nacionalidad.String + " (Salario Prom: $" + formatFloat(extra) + ")"
+case "lineas":
+    dato.Name = nacionalidad.String + " (Edad Prom: " + formatFloat(extra) + ")"
+case "pie":
+    dato.Name = dato.Name + " (Años Prom: " + formatFloat(extra) + ")"
+}
+Dependiendo del tipo de gráfico, se agrega información adicional al nombre del dato (dato.Name):
+Barras: Indica el promedio salarial.
+Líneas: Indica el promedio de edad.
+Pie: Indica la antigüedad promedio.
+formatFloat(extra):
+Formatea el valor extra como un número con formato (e.g., 2 decimales).
+Añadir dato procesado a la lista
+
+datos = append(datos, dato)
+El dato procesado (dato) se agrega a la lista datos.
+Devolver los datos procesados
+
+return datos, nil
+Retorna la lista de datos procesados y un valor nil para indicar que no hubo errores.
+Resumen del flujo
+Genera la consulta SQL y sus parámetros con buildQuery.
+Ejecuta la consulta usando db.QueryContext.
+Itera sobre las filas devueltas por la base de datos.
+Escanea y procesa cada fila:
+Obtiene el valor principal y un valor adicional (extra).
+Formatea el nombre del dato basado en el tipo de gráfico.
+Agrega los datos procesados a una lista.
+Devuelve la lista de datos procesados.
+
+
+
+
+***********************************************************************************************************
+func generarGrafico(ctx context.Context, tipo string, filtros Filtros, resultChan chan<- Grafico, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	// Generar clave para el caché
+	cacheKey := fmt.Sprintf("%s-%s-%s-%s", tipo, filtros.Nacionalidad, filtros.Educacion, filtros.Sexo)
+
+	// Intentar obtener del caché
+	if cached, found := c.Get(cacheKey); found {
+		if datos, ok := cached.([]GraficoDatos); ok {
+			resultChan <- Grafico{ID: tipo, Datos: datos}
+			return
+		}
+	}
+
+	// Si no está en caché, obtener de la base de datos
+	datos, err := obtenerDatosGrafico(ctx, tipo, filtros)
+	if err != nil {
+		log.Printf("Error al obtener datos para gráfico %s: %v", tipo, err)
+		resultChan <- Grafico{ID: tipo, Datos: []GraficoDatos{}}
+		return
+	}
+
+	// Guardar en caché por 5 minutos
+	c.Set(cacheKey, datos, 5*time.Minute)
+
+	resultChan <- Grafico{ID: tipo, Datos: datos}
+}
+
+
+Esta función generarGrafico es responsable de generar los datos de un gráfico de un tipo específico (barras, líneas, pie, etc.), ya sea recuperándolos de un caché o consultándolos en la base de datos. Además, envía el resultado a un canal para su procesamiento posterior.
+
+
+func generarGrafico(ctx context.Context, tipo string, filtros Filtros, resultChan chan<- Grafico, wg *sync.WaitGroup) {
+ctx: Contexto para manejar cancelaciones o límites de tiempo.
+tipo: El tipo de gráfico a generar (e.g., barras, líneas, etc.).
+filtros: Parámetros para personalizar la consulta (e.g., nacionalidad, nivel de educación, sexo).
+resultChan: Canal de solo envío (chan<-) para transmitir el gráfico generado.
+wg: Referencia al sync.WaitGroup, que coordina la finalización de tareas concurrentes.
+defer wg.Done()
+
+Garantiza que se decrementará el contador del WaitGroup cuando esta función termine, incluso si ocurre un error.
+Esto es importante para evitar bloqueos en el programa principal.
+Generar clave para el caché
+
+cacheKey := fmt.Sprintf("%s-%s-%s-%s", tipo, filtros.Nacionalidad, filtros.Educacion, filtros.Sexo)
+Crea una clave única basada en el tipo de gráfico y los filtros proporcionados.
+Ejemplo: Para un gráfico de tipo barras con filtros Nacionalidad=Chile, Educacion=Secundaria, y Sexo=Femenino, la clave sería:
+plaintext
+Copiar
+Editar
+barras-Chile-Secundaria-Femenino
+Intentar obtener del caché
+
+if cached, found := c.Get(cacheKey); found {
+    if datos, ok := cached.([]GraficoDatos); ok {
+        resultChan <- Grafico{ID: tipo, Datos: datos}
+        return
+    }
+}
+c.Get(cacheKey):
+
+Intenta recuperar el resultado del caché utilizando la clave generada.
+Si la clave existe, found será true, y cached contendrá los datos almacenados.
+Validación del tipo:
+
+Verifica si el valor almacenado en caché es del tipo []GraficoDatos.
+Si es válido, construye un objeto Grafico y lo envía al canal resultChan.
+Salida temprana:
+
+Si los datos se obtuvieron del caché, la función termina (return).
+Si no está en caché, obtener de la base de datos
+
+datos, err := obtenerDatosGrafico(ctx, tipo, filtros)
+if err != nil {
+    log.Printf("Error al obtener datos para gráfico %s: %v", tipo, err)
+    resultChan <- Grafico{ID: tipo, Datos: []GraficoDatos{}}
+    return
+}
+Llama a la función obtenerDatosGrafico para consultar los datos en la base de datos.
+
+Usa los parámetros ctx, tipo y filtros.
+Devuelve los datos y un posible error.
+Manejo de errores:
+
+Si ocurre un error:
+Se registra un mensaje en el log con el tipo de gráfico y el error.
+Se envía un gráfico vacío (Datos: []) al canal resultChan para evitar fallos posteriores.
+Guardar en caché los datos
+
+c.Set(cacheKey, datos, 5*time.Minute)
+Almacena los datos obtenidos en el caché utilizando la clave generada.
+El tiempo de vida de los datos en caché se establece en 5 minutos.
+Enviar resultado al canal
+
+resultChan <- Grafico{ID: tipo, Datos: datos}
+Construye un objeto Grafico con:
+ID: El tipo del gráfico.
+Datos: Los datos generados o recuperados.
+Lo envía al canal resultChan para su recolección en la función principal.
+Resumen del flujo
+Clave del caché:
+
+Se genera una clave única basada en los filtros.
+Intento de caché:
+
+Si los datos están en caché, se reutilizan.
+Si no, se consulta la base de datos.
+Consulta a la base de datos:
+
+Recupera datos en caso de que no existan en el caché.
+Maneja errores devolviendo un gráfico vacío.
+Guardar en caché:
+
+Almacena los datos generados para futuros usos.
+Envía el resultado:
+
+Transmite el gráfico generado al canal resultChan.
+
+
+
+*************************************************************************************
+
+func generarGraficos(ctx context.Context, filtros Filtros) []Grafico {
+	tiposGraficos := []string{"barras", "lineas", "pie"}
+	resultChan := make(chan Grafico, len(tiposGraficos))
+	var wg sync.WaitGroup
+
+	for _, tipo := range tiposGraficos {
+		wg.Add(1)
+		go generarGrafico(ctx, tipo, filtros, resultChan, &wg)
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	var graficos []Grafico
+	for grafico := range resultChan {
+		graficos = append(graficos, grafico)
+	}
+
+	return graficos
+}
+
+Descripción general del flujo
+Define los tipos de gráficos a generar: barras, líneas y pastel.
+Crea un canal para recolectar los resultados de los gráficos generados.
+Utiliza un WaitGroup para sincronizar la ejecución de varias gorutinas.
+Lanza una gorutina por cada tipo de gráfico, encargada de generar su resultado.
+Cierra el canal una vez que todas las gorutinas hayan terminado.
+Recoge los resultados del canal y los devuelve en un slice.
+Explicación del código
+Variables iniciales
+
+tiposGraficos := []string{"barras", "lineas", "pie"}
+resultChan := make(chan Grafico, len(tiposGraficos))
+var wg sync.WaitGroup
+tiposGraficos: Un slice con los tipos de gráficos a generar.
+resultChan: Un canal con capacidad igual al número de gráficos, donde cada gorutina enviará su resultado (Grafico).
+wg: Un sync.WaitGroup para coordinar la ejecución de las gorutinas.
+Lanzar gorutinas para generar gráficos
+
+for _, tipo := range tiposGraficos {
+	wg.Add(1)
+	go generarGrafico(ctx, tipo, filtros, resultChan, &wg)
+}
+Se itera sobre cada tipo de gráfico (barras, lineas, pie).
+Por cada tipo:
+Se incrementa el contador del WaitGroup (wg.Add(1)).
+Se lanza una gorutina que ejecuta generarGrafico con los parámetros:
+ctx: Contexto para manejar cancelaciones o límites de tiempo.
+tipo: Tipo de gráfico a generar.
+filtros: Filtros para personalizar el gráfico.
+resultChan: Canal donde enviará el resultado.
+&wg: Referencia al WaitGroup para notificar cuando termine.
+Esperar a que todas las gorutinas terminen
+
+go func() {
+	wg.Wait()
+	close(resultChan)
+}()
+Una nueva gorutina espera a que todas las tareas finalicen (wg.Wait()).
+Luego, cierra el canal (close(resultChan)) para indicar que no se enviarán más resultados.
+Recolectar resultados del canal
+
+var graficos []Grafico
+for grafico := range resultChan {
+	graficos = append(graficos, grafico)
+}
+Se itera sobre los valores recibidos en resultChan (los gráficos generados).
+Cada valor se agrega al slice graficos.
+El bucle termina automáticamente cuando resultChan se cierra.
+
+Devolver los gráficos
+
+return graficos
+Finalmente, el slice graficos con todos los resultados es devuelto.
+

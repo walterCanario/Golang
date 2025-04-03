@@ -1,0 +1,174 @@
+Roles de Cada Capa
+Handler:
+
+Responsabilidad: Manejar las solicitudes HTTP (recibir y responder).
+
+Qué hace:
+
+Recibe la solicitud HTTP (por ejemplo, un POST o GET).
+
+Valida los datos de entrada (si es necesario).
+
+Llama al servicio para ejecutar la lógica de negocio.
+
+Devuelve una respuesta HTTP (por ejemplo, un JSON o un código de estado).
+
+Ejemplo:
+
+El handler recibe una solicitud para crear un usuario.
+
+Llama al servicio para crear el usuario.
+
+Devuelve una respuesta con el usuario creado.
+
+Servicio:
+
+Responsabilidad: Manejar la lógica de negocio.
+
+Qué hace:
+
+Recibe los datos del handler.
+
+Aplica reglas de negocio (validaciones, cálculos, etc.).
+
+Llama al repositorio para interactuar con la base de datos.
+
+Devuelve los resultados al handler.
+
+Ejemplo:
+
+El servicio recibe los datos de un usuario.
+
+Valida que el correo electrónico no esté duplicado.
+
+Llama al repositorio para guardar el usuario en la base de datos.
+
+Devuelve el usuario creado al handler.
+
+Repositorio:
+
+Responsabilidad: Interactuar con la base de datos.
+
+Qué hace:
+
+Recibe las solicitudes del servicio.
+
+Ejecuta consultas SQL (o cualquier operación de base de datos).
+
+Devuelve los datos al servicio.
+
+Ejemplo:
+
+El repositorio recibe una solicitud para guardar un usuario.
+
+Ejecuta una consulta SQL para insertar el usuario en la base de datos.
+
+Devuelve el ID del usuario creado al servicio.
+
+Flujo de Datos
+El flujo de datos entre estas capas es el siguiente:
+
+Handler → Servicio:
+
+El handler recibe una solicitud HTTP y la pasa al servicio.
+
+El servicio maneja la lógica de negocio.
+
+Servicio → Repositorio:
+
+El servicio llama al repositorio para interactuar con la base de datos.
+
+El repositorio ejecuta las operaciones de base de datos.
+
+Repositorio → Servicio:
+
+El repositorio devuelve los datos al servicio.
+
+El servicio procesa los datos (si es necesario).
+
+Servicio → Handler:
+
+El servicio devuelve los resultados al handler.
+
+El handler construye la respuesta HTTP.
+
+Ejemplo Práctico
+Supongamos que tenemos un endpoint para crear un usuario. Este sería el flujo:
+
+Handler:
+
+Recibe una solicitud POST /users con los datos del usuario.
+
+Llama al servicio: userService.CreateUser(user).
+
+Servicio:
+
+Valida que el correo electrónico no esté duplicado.
+
+Llama al repositorio: userRepo.CreateUser(user).
+
+Repositorio:
+
+Ejecuta una consulta SQL para insertar el usuario en la base de datos.
+
+Devuelve el ID del usuario creado al servicio.
+
+Servicio:
+
+Devuelve el usuario creado al handler.
+
+Handler:
+
+Construye una respuesta HTTP con el usuario creado y un código de estado 201 Created.
+
+Ventajas de Esta Separación
+Separación de Responsabilidades:
+
+Cada capa tiene una responsabilidad clara y única.
+
+El handler se enfoca en manejar solicitudes HTTP.
+
+El servicio se enfoca en la lógica de negocio.
+
+El repositorio se enfoca en interactuar con la base de datos.
+
+Facilidad de Mantenimiento:
+
+Si necesitas cambiar la lógica de negocio, solo modificas el servicio.
+
+Si necesitas cambiar la base de datos, solo modificas el repositorio.
+
+Si necesitas cambiar la API, solo modificas el handler.
+
+Reutilización:
+
+El servicio puede ser reutilizado por diferentes handlers (por ejemplo, un handler HTTP y un handler CLI).
+
+El repositorio puede ser reutilizado por diferentes servicios.
+
+Testabilidad:
+
+Puedes probar cada capa de manera independiente.
+
+Puedes simular el repositorio para probar el servicio.
+
+Puedes simular el servicio para probar el handler.
+
+Resumen
+Handler: Maneja las solicitudes HTTP.
+
+Servicio: Maneja la lógica de negocio y actúa como intermediario entre el handler y el repositorio.
+
+Repositorio: Interactúa con la base de datos.
+
+El servicio es el intermediario porque:
+
+Recibe las solicitudes del handler.
+
+Aplica la lógica de negocio.
+
+Llama al repositorio para interactuar con la base de datos.
+
+Devuelve los resultados al handler.
+
+Esta separación de responsabilidades es clave para construir aplicaciones modulares, mantenibles y escalables.

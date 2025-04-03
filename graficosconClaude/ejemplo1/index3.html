@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráficos con Filtros</title>
+</head>
+<body>
+    <h1>Generar Gráficos con Filtros</h1>
+    <div>
+        <label for="nacionalidad">Nacionalidad:</label>
+        <select id="nacionalidad">
+            <option value="todos">Todos</option>
+            <option value="chilena">Chilena</option>
+            <option value="argentina">Argentina</option>
+        </select>
+
+        <label for="educacion">Educación:</label>
+        <select id="educacion">
+            <option value="todos">Todos</option>
+            <option value="primaria">Primaria</option>
+            <option value="secundaria">Secundaria</option>
+        </select>
+
+        <label for="sexo">Sexo:</label>
+        <select id="sexo">
+            <option value="todos">Todos</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+        </select>
+    </div>
+
+    <div id="charts">
+        <h2>Gráficos</h2>
+        <div id="chart1"></div>
+        <div id="chart2"></div>
+    </div>
+
+    <script>
+        const ws = new WebSocket("ws://localhost:8080/ws");
+// Escuchar el evento onopen para garantizar que la conexión está establecida
+ws.onopen = function () {
+    console.log("Conexión WebSocket establecida");
+    ws.send(JSON.stringify({ message: "¡Hola desde el cliente!" }));
+};
+
+ws.onmessage = function (event) {
+    console.log("Mensaje recibido:", event.data);
+};
+
+ws.onclose = function (event) {
+    console.log("Conexión cerrada:", event);
+};
+
+ws.onerror = function (error) {
+    console.error("Error en WebSocket:", error);
+};
+
+        ws.onmessage = function(event) {
+            const result = JSON.parse(event.data);
+            const chartDiv = document.getElementById(result.id);
+            chartDiv.innerText = result.data;
+        };
+
+        function sendChartRequests() {
+            const nacionalidad = document.getElementById("nacionalidad").value;
+            const educacion = document.getElementById("educacion").value;
+            const sexo = document.getElementById("sexo").value;
+
+            const charts = [
+                { id: "chart1", nacionalidad, educacion, sexo },
+                { id: "chart2", nacionalidad, educacion, sexo },
+            ];
+
+            charts.forEach(chart => ws.send(JSON.stringify(chart)));
+        }
+
+        // Enviar solicitudes al cambiar cualquier filtro
+        document.querySelectorAll("select").forEach(select => {
+            select.addEventListener("change", sendChartRequests);
+        });
+
+        // Enviar solicitudes iniciales
+        sendChartRequests();
+    </script>
+</body>
+</html>

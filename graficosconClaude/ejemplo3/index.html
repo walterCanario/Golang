@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard de Análisis</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            height: 100vh;
+            width: 250px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .grafico {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="sidebar bg-white shadow-lg p-4">
+        <h1 class="text-xl font-bold mb-6 text-gray-800">Dashboard</h1>
+        
+        <div class="filter-section">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Filtros</h2>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nacionalidad</label>
+                <select id="nacionalidad" class="w-full p-2 border rounded-md">
+                    <option value="">Todos</option>
+                    <option>Chilena</option>
+                    <option>Extranjera</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Educación</label>
+                <select id="educacion" class="w-full p-2 border rounded-md">
+                    <option value="">Todos</option>
+                    <option>ADMINISTRACION DELEGADA</option>
+                    <option>MUNICIPAL - DAEM</option>
+                    <option>SERVICIO LOCAL DE EDUCACION</option>
+                    <option>SERVICIO LOCAL DE EDUCACION (SLE)</option>
+                    <option>PARTICULAR SUBVENCIONADO</option>
+                    <option>CORPORACION MUNICIPAL</option>
+                    <option>PARTICULAR PAGADA (NO SUBVENCIONADO)</option>
+
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Sexo</label>
+                <select id="sexo" class="w-full p-2 border rounded-md">
+                    <option value="">Todos</option>
+                    <option>Mujer</option>
+                    <option>Hombre</option>
+                </select>
+            </div>
+
+            <button onclick="cargarGraficos()" 
+                    class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                Actualizar Gráficos
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-lg font-semibold mb-4">Distribución por Nacionalidad</h3>
+                <div id="grafico-barras" class="grafico"></div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <h3 class="text-lg font-semibold mb-4">Tendencia por Educación</h3>
+                <div id="grafico-lineas" class="grafico"></div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow col-span-2">
+                <h3 class="text-lg font-semibold mb-4">Distribución por Sexo</h3>
+                <div id="grafico-pie" class="grafico"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar gráficos
+        const graficosECharts = {
+            'barras': echarts.init(document.getElementById('grafico-barras')),
+            'lineas': echarts.init(document.getElementById('grafico-lineas')),
+            'pie': echarts.init(document.getElementById('grafico-pie'))
+        };
+
+        // Función para obtener filtros actuales
+        function obtenerFiltros() {
+            return {
+                nacionalidad: document.getElementById('nacionalidad').value,
+                educacion: document.getElementById('educacion').value,
+                sexo: document.getElementById('sexo').value
+            };
+        }
+
+        // Función para cargar gráficos
+        async function cargarGraficos() {
+            try {
+                const response = await fetch('http://localhost:8090/graficos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(obtenerFiltros())
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const graficos = await response.json();
+                console.log(graficos)
+                // Configuraciones base para los gráficos
+                const configuracionesBase = {
+                    barras: {
+                        title: {
+                            text: 'Distribución por Nacionalidad',
+                            left: 'center'
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            }
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: graficos.find(g => g.id === 'barras').datos.map(d => d.name)
+                        },
+                        yAxis: {
+                            type: 'value',
+                            name: 'Cantidad'
+                        },
+                        series: [{
+                            type: 'bar',
+                            data: graficos.find(g => g.id === 'barras').datos.map(d => d.value),
+                            itemStyle: {
+                                color: '#3b82f6'
+                            }
+                        }]
+                    },
+                    lineas: {
+                        title: {
+                            text: 'Tendencia por Educación',
+                            left: 'center'
+                        },
+                        tooltip: {
+                            trigger: 'axis'
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: graficos.find(g => g.id === 'lineas').datos.map(d => d.name)
+                        },
+                        yAxis: {
+                            type: 'value',
+                            name: 'Cantidad'
+                        },
+                        series: [{
+                            type: 'line',
+                            data: graficos.find(g => g.id === 'lineas').datos.map(d => d.value),
+                            smooth: true,
+                            lineStyle: {
+                                color: '#10b981'
+                            },
+                            areaStyle: {
+                                color: '#dcfce7'
+                            }
+                        }]
+                    },
+                    pie: {
+                        title: {
+                            text: 'Distribución por Sexo',
+                            left: 'center'
+                        },
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: '{a} <br/>{b}: {c} ({d}%)'
+                        },
+                        legend: {
+                            orient: 'horizontal',
+                            bottom: 'bottom'
+                        },
+                        series: [{
+                            name: 'Distribución',
+                            type: 'pie',
+                            radius: '50%',
+                            data: graficos.find(g => g.id === 'pie').datos,
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 10,
+                                    shadowOffsetX: 0,
+                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                }
+                            }
+                        }]
+                    }
+                };
+
+                // Renderizar cada gráfico con su configuración específica
+                Object.keys(graficosECharts).forEach(tipo => {
+                    graficosECharts[tipo].setOption(configuracionesBase[tipo]);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Ajustar tamaño de gráficos cuando cambia el tamaño de la ventana
+        window.addEventListener('resize', () => {
+            Object.values(graficosECharts).forEach(grafico => grafico.resize());
+        });
+
+        // Cargar datos iniciales
+        cargarGraficos();
+    </script>
+</body>
+</html>

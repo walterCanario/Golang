@@ -1,0 +1,120 @@
+// components/todo.templ
+package templates
+
+templ TodoApp() {
+    <div class="todo-container">
+        <h1>Todo List</h1>
+        
+        <!-- Contador de tareas -->
+        <div id="task-counter">
+            Tareas completadas: <span id="completed-count">0</span> / <span id="total-count">0</span>
+        </div>
+
+        <!-- Formulario para agregar tareas -->
+        <form id="todo-form" class="mb-4">
+            <input 
+                type="text" 
+                id="new-task" 
+                class="border p-2 mr-2" 
+                placeholder="Nueva tarea"
+                required
+            />
+            <button 
+                type="submit" 
+                class="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+                Agregar
+            </button>
+        </form>
+
+        <!-- Lista de tareas -->
+        <ul id="todo-list" class="space-y-2"></ul>
+    </div>
+
+    <script>
+        // Estado de la aplicación
+        let state = {
+            tasks: [],
+            completedTasks: 0
+        };
+
+        // Elementos del DOM
+        const form = document.getElementById('todo-form');
+        const input = document.getElementById('new-task');
+        const list = document.getElementById('todo-list');
+        const completedCount = document.getElementById('completed-count');
+        const totalCount = document.getElementById('total-count');
+
+        // Manejador para agregar tareas
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const taskText = input.value.trim();
+            if (taskText) {
+                addTask(taskText);
+                input.value = '';
+            }
+        });
+
+        // Función para agregar una tarea
+        function addTask(text) {
+            const task = {
+                id: Date.now(),
+                text,
+                completed: false
+            };
+
+            state.tasks.push(task);
+            
+            const li = document.createElement('li');
+            li.className = 'flex items-center space-x-2 p-2 border rounded';
+            li.innerHTML = `
+                <input 
+                    type="checkbox" 
+                    class="form-checkbox"
+                    onchange="toggleTask(${task.id})"
+                />
+                <span class="flex-grow">${text}</span>
+                <button 
+                    onclick="deleteTask(${task.id})"
+                    class="text-red-500 hover:text-red-700"
+                >
+                    Eliminar
+                </button>
+            `;
+
+            list.appendChild(li);
+            updateCounters();
+        }
+
+        // Función para alternar el estado de una tarea
+        function toggleTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                state.completedTasks += task.completed ? 1 : -1;
+                updateCounters();
+            }
+        }
+
+        // Función para eliminar una tarea
+        function deleteTask(id) {
+            const index = state.tasks.findIndex(t => t.id === id);
+            if (index !== -1) {
+                const task = state.tasks[index];
+                if (task.completed) {
+                    state.completedTasks--;
+                }
+                state.tasks.splice(index, 1);
+                list.children[index].remove();
+                updateCounters();
+            }
+        }
+
+        // Función para actualizar los contadores
+        function updateCounters() {
+            completedCount.textContent = state.completedTasks;
+            totalCount.textContent = state.tasks.length;
+        }
+    </script>
+}

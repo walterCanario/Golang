@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Dinámico</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .filtros {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .grafico-container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .grafico {
+            width: 30%;
+            height: 400px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="filtros">
+        <!-- Sección de Usuarios -->
+        <div>
+            <h3>Filtros de Usuarios</h3>
+            <label>Nacionalidad:
+                <select id="nacionalidad">
+                    <option value="">Todos</option>
+                    <option value="Mexico">México</option>
+                    <option value="USA">Estados Unidos</option>
+                    <option value="Canada">Canadá</option>
+                </select>
+            </label>
+            <label>Educación:
+                <select id="educacion">
+                    <option value="">Todos</option>
+                    <option value="Bachillerato">Bachillerato</option>
+                    <option value="Universitario">Universitario</option>
+                    <option value="Maestria">Maestría</option>
+                </select>
+            </label>
+            <label>Sexo:
+                <select id="sexo">
+                    <option value="">Todos</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Sección de Ventas -->
+        <div>
+            <h3>Filtros de Ventas</h3>
+            <label>Año:
+                <select id="anio">
+                    <option value="">Todos</option>
+                    <option value="2022">2022</option>
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                </select>
+            </label>
+            <label>Rango de Monto:
+                <select id="rango_monto">
+                    <option value="">Todos</option>
+                    <option value="0-1000">$0 - $1,000</option>
+                    <option value="1000-5000">$1,000 - $5,000</option>
+                    <option value="5000-mas">$5,000 o más</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <div class="grafico-container">
+        <div id="grafico-barras" class="grafico"></div>
+        <div id="grafico-lineas" class="grafico"></div>
+        <div id="grafico-pie" class="grafico"></div>
+    </div>
+
+    <div id="loading" class="loading">
+        Cargando gráficos...
+    </div>
+
+    <script>
+        // Configuración de WebSocket
+        const socket = new WebSocket('ws://localhost:8080/graficos');
+        
+        // Inicializar gráficos
+        const graficos = {
+            'barras': echarts.init(document.getElementById('grafico-barras')),
+            'lineas': echarts.init(document.getElementById('grafico-lineas')),
+            'pie': echarts.init(document.getElementById('grafico-pie'))
+        };
+
+        // Función para obtener filtros de usuarios
+        function obtenerFiltrosUsuarios() {
+            return {
+                nacionalidad: document.getElementById('nacionalidad').value,
+                educacion: document.getElementById('educacion').value,
+                sexo: document.getElementById('sexo').value
+            };
+        }
+
+        // Función para obtener filtros de ventas
+        function obtenerFiltrosVentas() {
+            return {
+                anio: document.getElementById('anio').value,
+                rango_monto: document.getElementById('rango_monto').value
+            };
+        }
+
+        // Función para enviar solicitud de gráficos
+        function solicitarGraficos(tipoFiltro) {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.textContent = 'Cargando gráficos...';
+            loadingDiv.style.display = 'block';
+
+            const filtros = tipoFiltro === 'usuarios' 
+                ? obtenerFiltrosUsuarios() 
+                : obtenerFiltrosVentas();
+
+            // Configuraciones para diferentes consultas
+            const configuraciones = {
+                'usuarios': {
+                    tabla: 'usuarios',
+                    columnas: filtros,
+                    agregacion: 'COUNT',
+                    campoValor: 'id'
+                },
+                'ventas': {
+                    tabla: 'ventas',
+                    columnas: filtros,
+                    agregacion: 'SUM',
+                    campoValor: 'monto'
+                }
+            };
+
+            socket.send(JSON.stringify(configuraciones[tipoFiltro]));
+        }
+
+        // Conexión WebSocket establecida
+        socket.onopen = function() {
+            // Cargar datos iniciales de usuarios
+            solicitarGraficos('usuarios');
+        };
+
+        // Recibir gráficos
+        socket.onmessage = function(event) {
+            const grafico = JSON.parse(event.data);
+            
+            const opciones = {
+                'barras': {
+                    title: { text: 'Gráfico de Barras' },
+                    xAxis: { type: 'category' },
+                    yAxis: { type: 'value' },
+                    series: [{ 
+                        type: 'bar', 
+                        data: grafico.datos 
+                    }]
+                },
+                'lineas': {
+                    title: { text: 'Gráfico de Líneas' },
+                    xAxis: { type: 'category' },
+                    yAxis: { type: 'value' },
+                    series: [{ 
+                        type: 'line', 
+                        data: grafico.datos 
+                    }]
+                },
+                'pie': {
+                    title: { text: 'Gráfico de Pastel' },
+                    series: [{ 
+                        type: 'pie',
+                        data: grafico.datos 
+                    }]
+                }
+            };
+
+            // Renderizar gráfico específico
+            graficos[grafico.id].setOption(opciones[grafico.id]);
+            
+            // Ocultar mensaje de carga
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = 'none';
+        };
+
+        // Manejo de errores de WebSocket
+        socket.onerror = function(error) {
+            console.error('WebSocket Error:', error);
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.textContent = 'Error al cargar gráficos';
+        };
+
+        // Agregar event listeners a los selects de usuarios
+        document.getElementById('nacionalidad').addEventListener('change', () => solicitarGraficos('usuarios'));
+        document.getElementById('educacion').addEventListener('change', () => solicitarGraficos('usuarios'));
+        document.getElementById('sexo').addEventListener('change', () => solicitarGraficos('usuarios'));
+
+        // Agregar event listeners a los selects de ventas
+        document.getElementById('anio').addEventListener('change', () => solicitarGraficos('ventas'));
+        document.getElementById('rango_monto').addEventListener('change', () => solicitarGraficos('ventas'));
+    </script>
+</body>
+</html>
